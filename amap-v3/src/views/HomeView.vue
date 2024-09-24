@@ -10,7 +10,7 @@
     <div class="flex gap-1">
       <a-button @click="handleMarkers">坐标点</a-button>
       <a-button>围栏</a-button>
-      <a-button>热力</a-button>
+      <a-button @click="handleHeatMap">热力</a-button>
       <a-button>网格</a-button>
     </div>
   </div>
@@ -21,6 +21,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { Message } from '@arco-design/web-vue'
+import { heatmapData } from '@/const/data'
 
 let map = null
 let _AMap = null
@@ -32,7 +33,11 @@ onMounted(() => {
   AMapLoader.load({
     key: '17d84e048fb846408c042b3cc3bbd7e4', // 申请好的Web端开发者Key，首次调用 load 时必填
     version: '2.0', // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
-    plugins: ['AMap.Scale'] //需要使用的的插件列表，如比例尺'AMap.Scale'，支持添加多个如：['...','...']
+    plugins: ['AMap.Scale', 'AMap.HeatMap'], //需要使用的的插件列表，如比例尺'AMap.Scale'，支持添加多个如：['...','...']
+    Loca: {
+      // 是否加载 Loca， 缺省不加载
+      version: '2.0.0' // Loca 版本，缺省 1.3.2
+    }
   })
     .then((AMap) => {
       _AMap = AMap
@@ -53,7 +58,9 @@ onUnmounted(() => {
   map?.destroy()
 })
 
-const markerList = ref('')
+const markerList = ref(`POINT (115.975944 40.462026)
+      POINT (116.8565085214192 40.38811656537166)
+      POINT (116.8134796184506 40.36655759357838)`)
 
 const handleMarkers = () => {
   if (!markerList.value) {
@@ -84,7 +91,30 @@ const handleMarkers = () => {
     })
     map.add(marker)
   }
-  map?.setFitView() // 调整视角以展示完整的围栏
+  map?.setFitView()
+}
+
+const heatMapData = ref('')
+const handleHeatMap = () => {
+  const heatmap = new _AMap.HeatMap(map, {
+    radius: 25, //给定半径
+    opacity: [0, 0.8]
+    /*,
+            gradient:{
+                0.5: 'blue',
+                0.65: 'rgb(117,211,248)',
+                0.7: 'rgb(0, 255, 0)',
+                0.9: '#ffea00',
+                1.0: 'red'
+            }
+             */
+  })
+  //设置数据集：该数据为北京部分“公园”数据
+  heatmap.setDataSet({
+    data: heatmapData,
+    max: 100
+  })
+  map?.setFitView()
 }
 </script>
 
