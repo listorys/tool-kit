@@ -1,29 +1,47 @@
 <template>
+  <div class="fixed !w-[300px] h-96 z-[999] flex flex-col gap-2 p-3 right-0 top-0 text-text-5">
+    <h2>坐标点</h2>
+    <a-textarea
+      class="w-full h-auto"
+      v-model="markerList"
+      placeholder="输入坐标点，如POINT (115.975944 40.462026)...，可多个"
+      allow-clear
+    />
+    <div class="flex gap-1">
+      <a-button @click="handleMarkers">坐标点</a-button>
+      <a-button>围栏</a-button>
+      <a-button>热力</a-button>
+      <a-button>网格</a-button>
+    </div>
+  </div>
   <div id="container"></div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
+import { Message } from '@arco-design/web-vue'
 
 let map = null
+let _AMap = null
 
 onMounted(() => {
-  window._AMapSecurityConfig = {
-    securityJsCode: '「你申请的安全密钥」'
-  }
+  // window._AMapSecurityConfig = {
+  //   securityJsCode: '17d84e048fb846408c042b3cc3bbd7e4'
+  // }
   AMapLoader.load({
     key: '17d84e048fb846408c042b3cc3bbd7e4', // 申请好的Web端开发者Key，首次调用 load 时必填
     version: '2.0', // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
     plugins: ['AMap.Scale'] //需要使用的的插件列表，如比例尺'AMap.Scale'，支持添加多个如：['...','...']
   })
     .then((AMap) => {
+      _AMap = AMap
       map = new AMap.Map('container', {
         // 设置地图容器id
         viewMode: '3D', // 是否为3D地图模式
         mapStyle: 'amap://styles/whitesmoke',
-        zoom: 11, // 初始化地图级别
-        center: [116.397428, 39.90923] // 初始化地图中心点位置
+        zoom: 11 // 初始化地图级别
+        // center: [116.397428, 39.90923] // 初始化地图中心点位置
       })
     })
     .catch((e) => {
@@ -34,6 +52,40 @@ onMounted(() => {
 onUnmounted(() => {
   map?.destroy()
 })
+
+const markerList = ref('')
+
+const handleMarkers = () => {
+  if (!markerList.value) {
+    Message.warning('啥都不输入，还想生成是吧？给你来一👊')
+    return
+  }
+  const regex = /POINT \((-?\d+\.\d+)\s+(-?\d+\.\d+)\)/g // 正则表达式，匹配POINT记录
+
+  const points = []
+  let match
+  while ((match = regex.exec(markerList.value)) !== null) {
+    points.push([parseFloat(match[1]), parseFloat(match[2])]) // 提取匹配的数字并转换为Number类型
+  }
+
+  if (!points?.length) {
+    Message.warning('标记数据格式错误，请输入有效的WKT格式')
+    return
+  }
+  points.forEach((item) => {
+    const [lng, lat] = item
+    setMarker(new _AMap.LngLat(lng, lat), this)
+  })
+  function setMarker(position, that) {
+    var marker = new _AMap.Marker({
+      position,
+      icon: 'https://a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-default.png',
+      offset: new _AMap.Pixel(-13, -30)
+    })
+    map.add(marker)
+  }
+  map?.setFitView() // 调整视角以展示完整的围栏
+}
 </script>
 
 <style lang="stylus" scoped>
